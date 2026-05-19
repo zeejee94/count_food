@@ -808,11 +808,23 @@
             
             modalContent.innerHTML = `<div style="padding:20px;color:#667eea;text-align:center;font-size:18px;">⏳ 加载中...</div>`;
             preview.classList.add('show');
+            
+            // 绑定Esc键关闭
+            document.addEventListener('keydown', handleEscKey);
         }
 
         function hideImagePreview(event) {
+            // 点击黑色背景关闭
             if (event && event.target.id !== 'imagePreview') return;
             document.getElementById('imagePreview').classList.remove('show');
+            document.removeEventListener('keydown', handleEscKey);
+        }
+        
+        function handleEscKey(event) {
+            if (event.key === 'Escape') {
+                document.getElementById('imagePreview').classList.remove('show');
+                document.removeEventListener('keydown', handleEscKey);
+            }
         }
 
         function displayResults() {
@@ -908,7 +920,7 @@
                         <td>${item.items}</td>
                         <td>RM${item.total.toFixed(2)}</td>
                         <td>
-                            ${item.receipt ? `<span class="url-cell" onmouseover="showImagePreview(event, '${item.receipt}')" onmouseout="hideImagePreview()" onclick="showImagePreview(event, '${item.receipt}')" title="Hover或点击查看照片" style="cursor:pointer;">🔗 收据</span>` : '—'}
+                            ${item.receipt ? `<span class="url-cell" onclick="showImagePreview(event, '${item.receipt}')" title="点击查看照片" style="cursor:pointer;">🔗 收据</span>` : '—'}
                         </td>
                     </tr>
                 `).join('');
