@@ -232,29 +232,74 @@
         .image-preview {
             position: fixed;
             display: none;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            z-index: 1000;
-            max-width: 600px;
-            max-height: 700px;
-            padding: 15px;
-            overflow: auto;
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            justify-content: center;
+            align-items: center;
         }
         
         .image-preview.show {
-            display: block;
+            display: flex;
         }
         
-        .image-preview img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            max-height: 650px;
+        .image-modal {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 90vw;
+            max-height: 90vh;
+            padding: 30px;
+            overflow: auto;
+            position: relative;
+            text-align: center;
+        }
+        
+        .image-modal img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 10px;
             object-fit: contain;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-close:hover {
+            background: #764ba2;
+        }
+        
+        .modal-button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        .modal-button:hover {
+            background: #764ba2;
         }
         
         .location-group {
@@ -453,7 +498,12 @@
         </div>
     </div>
     
-    <div class="image-preview" id="imagePreview"></div>
+    <div class="image-preview" id="imagePreview" onclick="hideImagePreview(event)">
+        <div class="image-modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="hideImagePreview()">✕</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
 
     <script>
         let uploadedData = null;
@@ -689,7 +739,8 @@
             }
             
             if (fileId) {
-                return `https://drive.google.com/uc?export=view&id=${fileId}`;
+                // 直接用Google Drive的thumbnail API（轻量级，不计流量）
+                return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
             }
             
             return null;
@@ -698,61 +749,69 @@
         function showImagePreview(event, url) {
             if (!url) return;
             
-            const imageUrl = getImageFromGoogleDrive(url);
-            if (!imageUrl) return;
+            event.stopPropagation();
             
             const preview = document.getElementById('imagePreview');
+            const modalContent = document.getElementById('modalContent');
             
-            // 创建图片元素，加载超时检测
+            // 创建图片元素
             const img = document.createElement('img');
-            img.src = imageUrl;
+            const imageUrl = getImageFromGoogleDrive(url);
+            
+            if (imageUrl) {
+                img.src = imageUrl;
+            }
             img.alt = '收据预览';
             
             // 设置超时（3秒）
             const timeoutId = setTimeout(() => {
-                preview.innerHTML = `
-                    <div style="padding:20px;color:#999;text-align:center;min-width:300px;">
-                        <strong>📸 图片加载超时</strong><br>
-                        <small style="margin-top:10px;display:block;line-height:1.6;">
+                modalContent.innerHTML = `
+                    <div style="padding:20px;color:#999;">
+                        <strong style="font-size:18px;display:block;margin-bottom:15px;">📸 图片加载超时</strong>
+                        <small style="display:block;line-height:1.8;margin-bottom:15px;">
                         可能原因：<br>
                         • Google Drive照片没有公开权限<br>
-                        • 网络连接问题<br><br>
-                        ✅ 解决方案：<br>
-                        在Google Drive中右键该文件<br>
-                        → "分享" → 改为"任何知道此链接的人"
+                        • 网络连接问题
                         </small>
+                        <button class="modal-button" onclick="window.open('${url}', '_blank')">
+                            🔗 在Google Drive中打开
+                        </button>
                     </div>
                 `;
             }, 3000);
             
             img.onload = () => {
                 clearTimeout(timeoutId);
-                preview.innerHTML = '';
-                preview.appendChild(img);
+                modalContent.innerHTML = '';
+                modalContent.appendChild(img);
             };
             
             img.onerror = () => {
                 clearTimeout(timeoutId);
-                preview.innerHTML = `
-                    <div style="padding:20px;color:#999;text-align:center;min-width:300px;">
-                        <strong>❌ 图片加载失败</strong><br>
-                        <small style="margin-top:10px;display:block;line-height:1.6;">
+                modalContent.innerHTML = `
+                    <div style="padding:20px;color:#999;">
+                        <strong style="font-size:18px;display:block;margin-bottom:15px;">❌ 图片加载失败</strong>
+                        <small style="display:block;line-height:1.8;margin-bottom:15px;">
                         可能原因：<br>
                         • 没有访问权限<br>
                         • 文件已删除<br><br>
                         ✅ 解决方案：<br>
-                        在Google Drive中右键该文件<br>
-                        → "分享" → 改为"任何知道此链接的人"
+                        点下面按钮在Google Drive中打开，<br>
+                        然后改为"任何知道此链接的人都可以查看"
                         </small>
+                        <button class="modal-button" onclick="window.open('${url}', '_blank')">
+                            🔗 在Google Drive中打开
+                        </button>
                     </div>
                 `;
             };
             
-            preview.innerHTML = `<div style="padding:20px;color:#667eea;text-align:center;">⏳ 加载中...</div>`;
+            modalContent.innerHTML = `<div style="padding:20px;color:#667eea;text-align:center;font-size:18px;">⏳ 加载中...</div>`;
             preview.classList.add('show');
         }
 
-        function hideImagePreview() {
+        function hideImagePreview(event) {
+            if (event && event.target.id !== 'imagePreview') return;
             document.getElementById('imagePreview').classList.remove('show');
         }
 
@@ -849,7 +908,7 @@
                         <td>${item.items}</td>
                         <td>RM${item.total.toFixed(2)}</td>
                         <td>
-                            ${item.receipt ? `<span class="url-cell" onmouseover="showImagePreview(event, '${item.receipt}')" onmouseout="hideImagePreview()" title="Hover查看照片" onclick="event.stopPropagation()">🔗 收据</span>` : '—'}
+                            ${item.receipt ? `<span class="url-cell" onmouseover="showImagePreview(event, '${item.receipt}')" onmouseout="hideImagePreview()" onclick="showImagePreview(event, '${item.receipt}')" title="Hover或点击查看照片" style="cursor:pointer;">🔗 收据</span>` : '—'}
                         </td>
                     </tr>
                 `).join('');
