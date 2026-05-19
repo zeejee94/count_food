@@ -642,11 +642,27 @@
         }
 
         function getImageFromGoogleDrive(url) {
-            const match = url.match(/id=([a-zA-Z0-9-_]+)/);
-            if (match) {
-                const fileId = match[1];
+            if (!url) return null;
+            
+            let fileId = null;
+            
+            // 格式1: https://drive.google.com/open?id=xxxxx
+            const match1 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+            if (match1) {
+                fileId = match1[1];
+            }
+            
+            // 格式2: https://drive.google.com/file/d/xxxxx/view
+            const match2 = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (!fileId && match2) {
+                fileId = match2[1];
+            }
+            
+            if (fileId) {
+                // 返回可以直接查看的URL
                 return `https://drive.google.com/uc?export=view&id=${fileId}`;
             }
+            
             return null;
         }
 
